@@ -526,7 +526,7 @@ def build(target_width_mm=180.0):
 
 
 if __name__ == '__main__':
-    out = '/Users/rookcohen/.openclaw/workspace/manion_mansion_entrance_v3_bolder_fit180.stl'
+    out = '/Users/rookcohen/.openclaw/workspace/mansion_entrance_v3_bolder_fit180.stl'
     m, pre, final, k, m_to_mm, ratio = build(180.0)
     m.export(out)
     print('Wrote:', out)
