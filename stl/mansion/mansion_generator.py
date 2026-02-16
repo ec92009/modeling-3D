@@ -234,11 +234,27 @@ def build(target_width_mm=180.0):
     oct.apply_translation([r_center_x, r_center_y, floor_ts + h1s / 2.0])
     parts.append(oct)
 
+    # Annex windows on all visible faces (lower level only)
+    win_w = 0.55 * s
+    win_d = 0.16 * s
+    win_h = 1.05 * s
+    win_z0, win_z1 = floor_ts + 0.95 * s, floor_ts + 0.95 * s + win_h
+
+    for deg in (-90, -54, -18, 18, 54):
+        a = math.radians(deg)
+        cxw = r_center_x + (rx * 0.95) * math.cos(a)
+        cyw = r_center_y + (ry * 0.95) * math.sin(a)
+
+        wx = win_w if abs(math.cos(a)) >= abs(math.sin(a)) else win_d
+        wy = win_d if abs(math.cos(a)) >= abs(math.sin(a)) else win_w
+
+        add_box(parts, cxw - wx / 2, cxw + wx / 2, cyw - wy / 2, cyw + wy / 2, win_z0, win_z1)
+
     # Octagonal roof for the annex
     roof = trimesh.creation.cone(radius=1.0, height=1.0, sections=8)
-    roof.apply_scale([rx * 1.05, ry * 1.05, 0.9 * s])
-    # align roof base to top of annex
-    rmin, rmax = roof.bounds
+    roof.apply_scale([rx * 1.00, ry * 1.00, 0.75 * s])
+    # align roof base to top of annex (flush, no extra lip)
+    rmin, _ = roof.bounds
     roof.apply_translation([r_center_x, r_center_y, floor_ts + h1s - rmin[2]])
     parts.append(roof)
 
@@ -404,8 +420,7 @@ def build(target_width_mm=180.0):
             (main_roof_z - 0.30 * s) - seal_h, (main_roof_z - 0.30 * s) + 0.03 * s)
     add_box(parts, x0 - side_wing_d * s - 0.03 * s, x0 + 3.8 * s + 0.03 * s, y0 + 0.6 * s - 0.03 * s, y1 - 0.6 * s + 0.03 * s,
             wing_roof_z - seal_h, wing_roof_z + 0.03 * s)
-    add_box(parts, x1 - 3.8 * s - 0.03 * s, x1 + side_wing_d * s + 0.03 * s, y0 + 0.6 * s - 0.03 * s, y1 - 0.6 * s + 0.03 * s,
-            wing_roof_z - seal_h, wing_roof_z + 0.03 * s)
+    # right wing seal band removed (was overlapping annex roof)
 
     # Octagonal towers with OPEN windows (2 per wall: lower + upper) + octagonal roofs
     tower_r = 1.5 * s
