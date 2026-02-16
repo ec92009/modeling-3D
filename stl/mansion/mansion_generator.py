@@ -234,21 +234,38 @@ def build(target_width_mm=180.0):
     oct.apply_translation([r_center_x, r_center_y, floor_ts + h1s / 2.0])
     parts.append(oct)
 
-    # Annex windows on all visible faces (lower level only)
+    # Annex windows as OPEN cut-throughs, aligned flat to each wall
     win_w = 0.55 * s
-    win_d = 0.16 * s
     win_h = 1.05 * s
     win_z0, win_z1 = floor_ts + 0.95 * s, floor_ts + 0.95 * s + win_h
 
-    for deg in (-90, -54, -18, 18, 54):
-        a = math.radians(deg)
-        cxw = r_center_x + (rx * 0.95) * math.cos(a)
-        cyw = r_center_y + (ry * 0.95) * math.sin(a)
+    annex_wall_t = 0.18 * s
+    n = 8
+    side_len = 2.0 * min(rx, ry) * math.sin(math.pi / n)
+    panel_r = min(rx, ry) - annex_wall_t / 2.0
 
-        wx = win_w if abs(math.cos(a)) >= abs(math.sin(a)) else win_d
-        wy = win_d if abs(math.cos(a)) >= abs(math.sin(a)) else win_w
+    visible_faces = { -90, -54, -18, 18, 54 }
 
-        add_box(parts, cxw - wx / 2, cxw + wx / 2, cyw - wy / 2, cyw + wy / 2, win_z0, win_z1)
+    def add_panel_piece(a_mid, x0, x1, z0, z1):
+        if x1 <= x0 or z1 <= z0:
+            return
+        b = trimesh.creation.box(extents=[x1 - x0, annex_wall_t, z1 - z0])
+        b.apply_translation([(x0 + x1) / 2.0, 0.0, (z0 + z1) / 2.0])
+        R = rotation_matrix(a_mid + math.pi / 2.0, [0, 0, 1])
+        b.apply_transform(R)
+        b.apply_translation([r_center_x + panel_r * math.cos(a_mid), r_center_y + panel_r * math.sin(a_mid), 0.0])
+        parts.append(b)
+
+    for i in range(n):
+        a_mid = -math.pi + (2.0 * math.pi * (i + 0.5)) / n
+        deg = int(round(math.degrees(a_mid)))
+        if deg in visible_faces:
+            add_panel_piece(a_mid, -side_len / 2.0, -win_w / 2.0, win_z0, win_z1)
+            add_panel_piece(a_mid,  win_w / 2.0,  side_len / 2.0, win_z0, win_z1)
+            add_panel_piece(a_mid, -side_len / 2.0,  side_len / 2.0, floor_ts, win_z0)
+            add_panel_piece(a_mid, -side_len / 2.0,  side_len / 2.0, win_z1, floor_ts + h1s)
+        else:
+            add_panel_piece(a_mid, -side_len / 2.0,  side_len / 2.0, floor_ts, floor_ts + h1s)
 
     # Octagonal roof for the annex
     roof = trimesh.creation.cone(radius=1.0, height=1.0, sections=8)
