@@ -129,11 +129,12 @@ def build(target_width_mm=180.0):
     x0, y0 = 0.0, 0.0
     x1, y1 = Ls, Ws
 
-    # Base plinth + ground floor slab (extended footprint)
-    base_x0 = x0 - side_wing_d * s - 0.8 * s
-    base_x1 = x1 + side_wing_d * s + 0.8 * s
-    base_y0 = y0 - 4.0 * s
-    base_y1 = y1 + 1.0 * s
+    # Base plinth + ground floor slab (at least 1m all around)
+    margin = 1.0 * s
+    base_x0 = x0 - margin
+    base_x1 = x1 + margin
+    base_y0 = y0 - margin
+    base_y1 = y1 + margin
     add_box(parts, base_x0, base_x1, base_y0, base_y1, 0, floor_ts)
 
     # Openings layout on main front wall
@@ -221,59 +222,59 @@ def build(target_width_mm=180.0):
         wall_ts,
         [],
     )
-    # Right annex: octagonal segment (5 visible sides once attached)
-    rx_len = 3.8 * s + side_wing_d * s
-    ry_len = Ws - 1.2 * s
-    rx = rx_len / 2.0
-    ry = ry_len / 2.0
-    r_center_x = (x1 - 3.8 * s) + rx
-    r_center_y = (y0 + 0.6 * s) + ry
+    # Right annex: rectangular outside (2.5m wide), 5m deep
+    annex_w = 2.5 * s
+    annex_depth = 5.0 * s
+    annex_h = h1s
 
-    oct = trimesh.creation.cylinder(radius=1.0, height=1.0, sections=8)
-    oct.apply_scale([rx, ry, h1s])
-    oct.apply_translation([r_center_x, r_center_y, floor_ts + h1s / 2.0])
-    parts.append(oct)
+    # place annex outside to the right of the main building
+    ax0 = x1
+    ax1 = x1 + annex_w
+    ay0 = y0 + 0.6 * s
+    ay1 = ay0 + annex_depth
 
-    # Annex windows as OPEN cut-throughs, aligned flat to each wall
-    win_w = 0.55 * s
+    # Rectangular annex shell with open windows
+    wall_t = 0.20 * s
+
+    # front wall (y=ay0) with one window opening
+    win_w = 0.70 * s
     win_h = 1.05 * s
     win_z0, win_z1 = floor_ts + 0.95 * s, floor_ts + 0.95 * s + win_h
+    fx0 = ax0 + 0.6 * s
+    fx1 = fx0 + win_w
+    add_box(parts, ax0, fx0, ay0, ay0 + wall_t, floor_ts, floor_ts + annex_h)
+    add_box(parts, fx1, ax1, ay0, ay0 + wall_t, floor_ts, floor_ts + annex_h)
+    add_box(parts, fx0, fx1, ay0, ay0 + wall_t, floor_ts, win_z0)
+    add_box(parts, fx0, fx1, ay0, ay0 + wall_t, win_z1, floor_ts + annex_h)
 
-    annex_wall_t = 0.18 * s
-    n = 8
-    side_len = 2.0 * min(rx, ry) * math.sin(math.pi / n)
-    panel_r = min(rx, ry) - annex_wall_t / 2.0
+    # back wall (y=ay1) with one window opening
+    bx0 = ax0 + 0.6 * s
+    bx1 = bx0 + win_w
+    add_box(parts, ax0, bx0, ay1 - wall_t, ay1, floor_ts, floor_ts + annex_h)
+    add_box(parts, bx1, ax1, ay1 - wall_t, ay1, floor_ts, floor_ts + annex_h)
+    add_box(parts, bx0, bx1, ay1 - wall_t, ay1, floor_ts, win_z0)
+    add_box(parts, bx0, bx1, ay1 - wall_t, ay1, win_z1, floor_ts + annex_h)
 
-    visible_faces = { -90, -54, -18, 18, 54 }
+    # left wall (x=ax0) solid
+    add_box(parts, ax0, ax0 + wall_t, ay0, ay1, floor_ts, floor_ts + annex_h)
 
-    def add_panel_piece(a_mid, x0, x1, z0, z1):
-        if x1 <= x0 or z1 <= z0:
-            return
-        b = trimesh.creation.box(extents=[x1 - x0, annex_wall_t, z1 - z0])
-        b.apply_translation([(x0 + x1) / 2.0, 0.0, (z0 + z1) / 2.0])
-        R = rotation_matrix(a_mid + math.pi / 2.0, [0, 0, 1])
-        b.apply_transform(R)
-        b.apply_translation([r_center_x + panel_r * math.cos(a_mid), r_center_y + panel_r * math.sin(a_mid), 0.0])
-        parts.append(b)
+    # right wall (x=ax1) with two window openings evenly spaced
+    side_span = (ay1 - ay0)
+    w1 = ay0 + side_span * (1.0/3.0) - win_w/2
+    w2 = ay0 + side_span * (2.0/3.0) - win_w/2
+    add_box(parts, ax1 - wall_t, ax1, ay0, w1, floor_ts, floor_ts + annex_h)
+    add_box(parts, ax1 - wall_t, ax1, w1 + win_w, w2, floor_ts, floor_ts + annex_h)
+    add_box(parts, ax1 - wall_t, ax1, w2 + win_w, ay1, floor_ts, floor_ts + annex_h)
+    add_box(parts, ax1 - wall_t, ax1, w1, w1 + win_w, floor_ts, win_z0)
+    add_box(parts, ax1 - wall_t, ax1, w1, w1 + win_w, win_z1, floor_ts + annex_h)
+    add_box(parts, ax1 - wall_t, ax1, w2, w2 + win_w, floor_ts, win_z0)
+    add_box(parts, ax1 - wall_t, ax1, w2, w2 + win_w, win_z1, floor_ts + annex_h)
 
-    for i in range(n):
-        a_mid = -math.pi + (2.0 * math.pi * (i + 0.5)) / n
-        deg = int(round(math.degrees(a_mid)))
-        if deg in visible_faces:
-            add_panel_piece(a_mid, -side_len / 2.0, -win_w / 2.0, win_z0, win_z1)
-            add_panel_piece(a_mid,  win_w / 2.0,  side_len / 2.0, win_z0, win_z1)
-            add_panel_piece(a_mid, -side_len / 2.0,  side_len / 2.0, floor_ts, win_z0)
-            add_panel_piece(a_mid, -side_len / 2.0,  side_len / 2.0, win_z1, floor_ts + h1s)
-        else:
-            add_panel_piece(a_mid, -side_len / 2.0,  side_len / 2.0, floor_ts, floor_ts + h1s)
-
-    # Octagonal roof for the annex
-    roof = trimesh.creation.cone(radius=1.0, height=1.0, sections=8)
-    roof.apply_scale([rx * 1.00, ry * 1.00, 0.75 * s])
-    # align roof base to top of annex (flush, no extra lip)
-    rmin, _ = roof.bounds
-    roof.apply_translation([r_center_x, r_center_y, floor_ts + h1s - rmin[2]])
-    parts.append(roof)
+    # Annex roof: simple gable
+    roof_pitch = 30
+    overhang = 0.12 * s
+    roof_t = 0.18 * s
+    add_roof(parts, ax0, ay0, annex_w, annex_depth, floor_ts + annex_h, roof_pitch, overhang, roof_t, gable=True)
 
     # Central front projection (framed mass, keeps entrance clear)
     cx0, cx1 = x0 + 8.0 * s, x0 + 16.0 * s
