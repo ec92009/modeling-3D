@@ -221,17 +221,26 @@ def build(target_width_mm=180.0):
         wall_ts,
         [],
     )
-    add_shell_with_front_openings(
-        parts,
-        x1 - 3.8 * s,
-        y0 + 0.6 * s,
-        3.8 * s + side_wing_d * s,
-        Ws - 1.2 * s,
-        floor_ts,
-        floor_ts + h1s,
-        wall_ts,
-        [],
-    )
+    # Right annex: octagonal segment (5 visible sides once attached)
+    rx_len = 3.8 * s + side_wing_d * s
+    ry_len = Ws - 1.2 * s
+    rx = rx_len / 2.0
+    ry = ry_len / 2.0
+    r_center_x = (x1 - 3.8 * s) + rx
+    r_center_y = (y0 + 0.6 * s) + ry
+
+    oct = trimesh.creation.cylinder(radius=1.0, height=1.0, sections=8)
+    oct.apply_scale([rx, ry, h1s])
+    oct.apply_translation([r_center_x, r_center_y, floor_ts + h1s / 2.0])
+    parts.append(oct)
+
+    # Octagonal roof for the annex
+    roof = trimesh.creation.cone(radius=1.0, height=1.0, sections=8)
+    roof.apply_scale([rx * 1.05, ry * 1.05, 0.9 * s])
+    # align roof base to top of annex
+    rmin, rmax = roof.bounds
+    roof.apply_translation([r_center_x, r_center_y, floor_ts + h1s - rmin[2]])
+    parts.append(roof)
 
     # Central front projection (framed mass, keeps entrance clear)
     cx0, cx1 = x0 + 8.0 * s, x0 + 16.0 * s
@@ -387,8 +396,6 @@ def build(target_width_mm=180.0):
     add_roof(parts, x0 + inset, y0 + inset, Ls - 2 * inset, Ws - 2 * inset,
              main_roof_z - 0.30 * s, 35, 0.35 * s, 0.22 * s, gable=True)
     add_roof(parts, x0 - side_wing_d * s, y0 + 0.6 * s, 3.8 * s + side_wing_d * s, Ws - 1.2 * s,
-             wing_roof_z, 30, 0.25 * s, 0.20 * s, gable=True)
-    add_roof(parts, x1 - 3.8 * s, y0 + 0.6 * s, 3.8 * s + side_wing_d * s, Ws - 1.2 * s,
              wing_roof_z, 30, 0.25 * s, 0.20 * s, gable=True)
 
     # Roof-wall sealing bands to remove tiny daylight gaps at eaves/intersections
